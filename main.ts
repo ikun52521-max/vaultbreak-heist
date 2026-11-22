@@ -17,8 +17,9 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = new URL('.', import.meta.url).pathname;
+const repoRoot = fileURLToPath(new URL('.', import.meta.url));
 const outDir = process.env.MAKEFUN_OUTPUT_DIR || '/output';
 
 function copyTree(src: string, dest: string): void {
@@ -49,9 +50,14 @@ function main(): void {
     throw new Error('screenshots/: no such directory in this repository');
   }
 
-  // Start from a clean output directory so a stale file can never survive.
-  rmSync(outDir, { recursive: true, force: true });
+  // Start from a clean slate for the artifacts this program owns. Never
+  // remove outDir itself: in the grader it is a mounted volume and
+  // removing a mount point fails with EBUSY. Only clear the children we
+  // own, so a stale file can never survive.
   mkdirSync(outDir, { recursive: true });
+  rmSync(join(outDir, 'game'), { recursive: true, force: true });
+  rmSync(join(outDir, 'screenshots'), { recursive: true, force: true });
+  rmSync(join(outDir, 'dossier.json'), { force: true });
 
   copyTree(gameDir, join(outDir, 'game'));
   copyTree(shotsDir, join(outDir, 'screenshots'));
